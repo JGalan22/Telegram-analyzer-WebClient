@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% load app_filters %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col"></div>
+        <div class="col-8">
+            <h3 class="text-center text-dark site-heading font-weight-bold ">Channels & Chats from Telegram</h3>
+
+            <div class="card border-primary mb-3">
+                <div class="card-header">
+                    <div class="row">
+                        <h4 class="font-weight-bold col-10">{{channel.title}}</h4>
+                        <p class="col">{{channel.participants_count}} <i class="fas fa-users"></i></p>
+                    </div>
+                    <p class="text-center mb-0">Last updated: {{channel.updated|date:"D d M Y" }}
+                        {{ channel.updated|time:"H:i" }}</p>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <p class="col-10 mb-0">ID Channel: {{channel.id_channel}}</p>
+                        {% if channel.verified == true %}
+                        <i class="fas fa-check-circle col pt-2" style="color: rgba(22, 219, 32, 0.582);"></i>
+                        {% else %}
+                        <i class="fas fa-check-circle col pt-2"></i>
+                        {%endif%}
+                    </div>
+                    <p>Megagroup: {% if channel.megagroup %}Yes{% else %}No{% endif %}
+                    </p>
+                    <p>Access Hash: {{channel.access_hash}}</p>
+                    <p>Username: {{channel.username}}</p>
+                    <p>Date: {{channel.date|date:"D d M Y"}} {{channel.date|time:"H:i"}}</p>
+                    <p>{{recap_analise}}</p>
+                    <p>Current user id: {{channel.current_user_id}}</p>
+                    
+
+                    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link {% if  tab_active == 'msgs'%} active {% endif %}" id="pills-msgs-tabs" data-toggle="pill" href="#messages-channel"
+                                role="tab" aria-controls="pills-msgs" aria-selected="true">Messages ({{total_messages}})</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if  tab_active == 'urls'%} active {% endif %}" id="pills-urls-tabs " data-toggle="pill" href="#urls-channel" role="tab"
+                                aria-controls="pills-urls" aria-selected="false">Urls ({{total_urls}})</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link  {% if  tab_active == 'media'%} active {% endif %}" id="pills-media-tabs" data-toggle="pill" href="#media-channel" role="tab"
+                                aria-controls="pills-media" aria-selected="false">Media ({{media_list | length}})</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-media-tabs" data-toggle="pill" href="#report-channel" role="tab"
+                                aria-controls="pills-report" aria-selected="false">Report Words</a>
+                        </li>
+
+                    </ul>
+                    <div class="tab-content" id="pills-tabContent">
+                        <div class="tab-pane fade {% if  tab_active == 'msgs'%} active show{% endif %} " id="messages-channel" role="tabpanel"
+                            aria-labelledby="pills-msgs-tabs">
+                            
+                            {% if channel.messages.object_list %}
+                                
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Message</th>                                      
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    {% for msg in channel.messages.object_list  %}
+                                    <tr>
+                                        <th scope="row">{{msg.id_msg}}</th>
+                                        
+                                        {% if msg.id_from == current_user_id %}
+                                            <td>{% if msg.id_media %}{{msg.file_name}}{% else %}{{msg.message}}{% endif %}</td>
+                                        {%else%}    
+                                            <td>{% if msg.id_media %}{{msg.file_name|obfuscate_string}}{% else %}{{msg.message|obfuscate_string}}{% endif %}</td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            
+                            <nav aria-label="Page navigation messages">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item {% if not previous_page_messages%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ previous_page_messages}}#messages-channel">Previous</a>
+                                    </li>
+
+                                    {%for count in channel.messages.paginator.page_range %}
+
+                                        {% if channel.messages.number == count  %}
+                                            <li class="page-item active">
+                                                <span class="page-link">
+                                                    {{count}}  
+                                                <span class="sr-only">(current)</span>
+                                                </span>
+                                            </li>
+                                        {% elif count > channel.messages.number|add:-3 and channel.messages.number|add:3  %}
+
+                                            <li class="page-item"><a class="page-link" href="?page_msgs={{count}}#messages-channel">{{count}}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <li class="page-item {% if not next_page_messages%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ next_page_messages}}#messages-channel">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            {% else %}
+                            <h5>Uups...There are not information yet</h5>
+                                
+                            {% endif %}
+                                
+                        </div>
+                        <div class="tab-pane fade {% if  tab_active == 'urls'%} active show {% endif %}" id="urls-channel" role="tabpanel" aria-labelledby="pills-urls-tabs">
+                            {% if channel.messages.object_list %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Url</th>
+                                        <th scope="col">Analysed</th>
+                                        <th scope="col">Clasification</th>
+                                        <th scope="col">More Info</th>
+
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    {% for url in channel.urls  %}
+                                    <tr>
+                                        <td><a href="{{url.url}}">{{url.url | truncatechars:24}}</a></td>
+                                        <td>{{url.detected_by}}</td>
+                                        <td>{% if url.classification %}{{url.classification}}{% else %}{% endif %}</td>
+                                        <td>{% if url.info_malicious %}{{url.info_malicious}}{% else %}{% endif %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <nav aria-label="Page navigation urls">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item {% if not previous_page_urls%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ previous_page_urls}}#urls-channel">Previous</a>
+                                    </li>
+
+                                    {%for count in channel.urls.paginator.page_range %}
+
+                                        {% if channel.urls.number == count  %}
+                                            <li class="page-item active">
+                                                <span class="page-link">
+                                                    {{count}}  
+                                                <span class="sr-only">(current)</span>
+                                                </span>
+                                            </li>
+                                        {% elif count > channel.urls.number|add:-3 and channel.urls.number|add:3  %}
+
+                                            <li class="page-item"><a class="page-link" href="?page_urls={{count}}#urls-channel">{{count}}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <li class="page-item {% if not next_page_urls%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ next_page_urls}}#urls-channel">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            {% else %}
+                            <h5>Uups...There are not information yet</h5>
+                                
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane fade {% if  tab_active == 'media'%} active show {% endif %}" id="media-channel" role="tabpanel" aria-labelledby="pills-media-tabs">
+                            {% if channel.messages.object_list %}
+
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Name</th>
+                                        <th scope="col">Prediction</th>
+                                        <th scope="col">Detected by</th>
+                                        <th scope="col">Type</th>
+                                        <th scope="col">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    {% for file in media_list.object_list  %}
+                                    <tr>
+                                        <td>{{file.file_name}}</td>
+                                        <td>{% if file.prediction %}{{file.prediction}}{% else %}{% endif %}</td>
+                                        <td>{{file.detected_by}}</td>
+                                        <td>{{file.type}}</td>
+                                        <td>{{file.size_media}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            <nav aria-label="Page navigation urls">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item {% if not previous_page_media%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ previous_page_media}}#media-channel">Previous</a>
+                                    </li>
+
+                                    {%for count in media_list.paginator.page_range %}
+
+                                        {% if media_list.number == count  %}
+                                            <li class="page-item active">
+                                                <span class="page-link">
+                                                    {{count}}  
+                                                <span class="sr-only">(current)</span>
+                                                </span>
+                                            </li>
+                                        {% elif count > media_list.number|add:-3 and media_list.number|add:3  %}
+
+                                            <li class="page-item"><a class="page-link" href="?page_media={{count}}#media-channel">{{count}}</a></li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <li class="page-item {% if not next_page_media%} disabled {% endif %}">
+                                        <a class="page-link" href="{{ next_page_media}}#media-channel">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            {% else %}
+                            <h5>Uups...There are not information yet</h5>
+                                
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane fade" id="report-channel" role="tabpanel" aria-labelledby="pills-report-tabs">
+                            {% if channel.messages.object_list %}
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Word</th>
+                                        <th scope="col">Matches</th>
+                                </thead>
+                                <tbody>
+
+                                    {% for word,match in report_words_list.items  %}
+                                    <tr>
+                                        <td>{{word}}</td>
+                                        <td>{{match}}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <h5>Uups...There are not information yet</h5>
+                                
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col"></div>
+    </div>
+</div>
+
+{% endblock content %}
